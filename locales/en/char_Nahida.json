@@ -1,5 +1,6 @@
 {
   "c2Cond": "Opponents marked with Seed of Skandha",
   "c4Cond": "Nearby Opponents affected by Seeds of Skandha",
-  "c6Dmg": "Tri-Karma Purification: Karmic Oblivion DMG"
+  "c6Dmg": "Tri-Karma Purification: Karmic Oblivion DMG",
+  "extendedDuration": "Total Duration"
 }
