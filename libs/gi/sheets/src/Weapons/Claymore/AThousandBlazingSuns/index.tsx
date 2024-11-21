@@ -1,5 +1,5 @@
 import type { WeaponKey } from '@genshin-optimizer/gi/consts'
-import { equal, input, subscript } from '@genshin-optimizer/gi/wr'
+import { equal, input, percent, subscript, sum } from '@genshin-optimizer/gi/wr'
 import { cond, st, stg } from '../../../SheetUtil'
 import type { IWeaponSheet } from '../../IWeaponSheet'
 import { WeaponSheet, headerTemplate } from '../../WeaponSheet'
@@ -7,48 +7,91 @@ import { dataObjForWeaponSheet } from '../../util'
 
 const key: WeaponKey = 'AThousandBlazingSuns'
 
-const atk_Src = [-1, 0.2, 0.25, 0.3, 0.35, 0.4]
-const atkTeam_Src = [-1, 0.4, 0.5, 0.6, 0.7, 0.8]
-const [condPassivePath, condPassive] = cond(key, 'WolfishTracker')
-const atk_ = subscript(input.weapon.refinement, atk_Src)
-const atkTeam_ = equal(
-  'on',
-  condPassive,
-  subscript(input.weapon.refinement, atkTeam_Src, { path: 'atk_' })
+const critDmg_Src = [-1, 0.2, 0.25, 0.3, 0.35, 0.4]
+const atk_Src = [-1, 0.28, 0.35, 0.42, 0.49, 0.56]
+const [condPassivePath, condPassive] = cond(key, 'SunsetReignitesTheDawn')
+const critDmg_ = equal(
+  input.weapon.key,
+  key,
+  equal(
+    condPassive,
+    'on',
+    subscript(input.weapon.refinement, critDmg_Src, {
+      path: 'critDMG_',
+    })
+  )
+)
+const atk_ = equal(
+  input.weapon.key,
+  key,
+  equal(
+    condPassive,
+    'on',
+    subscript(input.weapon.refinement, atk_Src, {
+      path: 'atk_',
+    })
+  )
+)
+
+const [condPassivePath2, condPassive2] = cond(
+  key,
+  'SunsetReignitesTheDawnNightSoul'
+)
+const critDmgNightSoulBlessingBuff = equal(
+  input.weapon.key,
+  key,
+  equal(condPassive2, 'on', percent(0.75, { path: 'critDMG_' }))
+)
+const atkNightSoulBlessingBuff = equal(
+  input.weapon.key,
+  key,
+  equal(condPassive2, 'on', percent(0.75, { path: 'atk_' }))
 )
 
 const data = dataObjForWeaponSheet(key, {
   premod: {
-    atk_: atk_,
-  },
-  teamBuff: {
-    premod: {
-      atk_: atkTeam_,
-    },
+    atk_: sum(atk_, atkNightSoulBlessingBuff),
+    critDMG_: sum(critDmg_, critDmgNightSoulBlessingBuff),
   },
 })
 const sheet: IWeaponSheet = {
   document: [
     {
-      header: headerTemplate(key, st('base')),
-      fields: [{ node: atk_ }],
-    },
-    {
       value: condPassive,
       path: condPassivePath,
-      teamBuff: true,
       header: headerTemplate(key, st('conditional')),
-      name: st('enemyLessPercentHP', { percent: 30 }),
+      name: st('hitOp.skillOrBurst'),
       states: {
         on: {
           fields: [
             {
-              node: atkTeam_,
+              node: critDmg_,
+            },
+            {
+              node: atk_,
             },
             {
               text: stg('duration'),
-              value: 12,
+              value: 6,
               unit: 's',
+            },
+          ],
+        },
+      },
+    },
+    {
+      value: condPassive2,
+      path: condPassivePath2,
+      header: headerTemplate(key, st('conditional')),
+      name: st('nightsoul.blessing'),
+      states: {
+        on: {
+          fields: [
+            {
+              node: critDmgNightSoulBlessingBuff,
+            },
+            {
+              node: atkNightSoulBlessingBuff,
             },
           ],
         },
