@@ -157,6 +157,7 @@ export const characterIdMap: Record<
   10000103: 'Xilonen',
   10000104: 'Chasca',
   10000105: 'Ororon',
+  10000106: 'Mavuika',
   // 11000008: "TEMPLATE",
   // 11000009: "TEMPLATE",
   // 11000010: "TEMPLATE",

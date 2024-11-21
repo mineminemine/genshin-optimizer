@@ -49,6 +49,7 @@ import Layla from './Character_Layla_Card.jpeg'
 import Lisa from './Character_Lisa_Card.jpg'
 import Lynette from './Character_Lynette_Card.jpg'
 import Lyney from './Character_Lyney_Card.jpg'
+import Mavuika from './Character_Mavuika_Card.png'
 import Mika from './Character_Mika_Card.jpg'
 import Mona from './Character_Mona_Card.jpg'
 import Mualani from './Character_Mualani_Card.jpg'
@@ -144,6 +145,7 @@ const charCards = {
   Lisa,
   Lyney,
   Lynette,
+  Mavuika,
   Mika,
   Mona,
   Mualani,

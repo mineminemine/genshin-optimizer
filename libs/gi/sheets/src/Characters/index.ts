@@ -57,6 +57,7 @@ import Layla from './Layla'
 import Lisa from './Lisa'
 import Lynette from './Lynette'
 import Lyney from './Lyney'
+import Mavuika from './Mavuika'
 import Mika from './Mika'
 import Mona from './Mona'
 import Mualani from './Mualani'
@@ -160,6 +161,7 @@ const characters: Record<CharacterSheetKey, CharacterSheet> = {
   Lisa,
   Lynette,
   Lyney,
+  Mavuika,
   Mika,
   Mona,
   Mualani,

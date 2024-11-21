@@ -1,6 +1,7 @@
 // This is a generated index file.
 import Absolution from './Absolution'
 import Akuoumaru from './Akuoumaru'
+import AThousandBlazingSuns from './AThousandBlazingSuns'
 import AlleyHunter from './AlleyHunter'
 import AmenomaKageuchi from './AmenomaKageuchi'
 import AmosBow from './AmosBow'
@@ -215,6 +216,7 @@ const data = {
   AquilaFavonia,
   AshGravenDrinkingHorn,
   AstralVulturesCrimsonPlumage,
+  AThousandBlazingSuns,
   BalladOfTheBoundlessBlue,
   BalladOfTheFjords,
   BeaconOfTheReedSea,

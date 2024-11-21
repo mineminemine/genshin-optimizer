@@ -1,6 +1,7 @@
 import type { TagMapNodeEntries } from '../util'
 import Absolution from './Absolution'
 import Akuoumaru from './Akuoumaru'
+import AThousandBlazingSuns from './AThousandBlazingSuns'
 import AlleyHunter from './AlleyHunter'
 import AmenomaKageuchi from './AmenomaKageuchi'
 import AmosBow from './AmosBow'
@@ -252,6 +253,7 @@ const data: TagMapNodeEntries[] = [
   WolfFang,
   XiphosMoonlight,
   Akuoumaru,
+  AThousandBlazingSuns,
   BeaconOfTheReedSea,
   BlackcliffSlasher,
   BloodtaintedGreatsword,

@@ -2,6 +2,7 @@ import type { WeaponClaymoreKey } from '@genshin-optimizer/gi/consts'
 import type { WeaponSheet } from '../WeaponSheet'
 
 import Akuoumaru from './Akuoumaru'
+import AThousandBlazingSuns from './AThousandBlazingSuns'
 import BeaconOfTheReedSea from './BeaconOfTheReedSea'
 import BlackcliffSlasher from './BlackcliffSlasher'
 import BloodtaintedGreatsword from './BloodtaintedGreatsword'
@@ -41,6 +42,7 @@ import Whiteblind from './Whiteblind'
 import WolfsGravestone from './WolfsGravestone'
 const claymore: Record<WeaponClaymoreKey, WeaponSheet> = {
   Akuoumaru,
+  AThousandBlazingSuns,
   BeaconOfTheReedSea,
   BlackcliffSlasher,
   BloodtaintedGreatsword,
