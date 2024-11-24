@@ -1,5 +1,12 @@
 import type { WeaponKey } from '@genshin-optimizer/gi/consts'
-import { equal, input, percent, subscript, sum } from '@genshin-optimizer/gi/wr'
+import {
+  equal,
+  input,
+  percent,
+  prod,
+  subscript,
+  sum,
+} from '@genshin-optimizer/gi/wr'
 import { cond, st, stg } from '../../../SheetUtil'
 import type { IWeaponSheet } from '../../IWeaponSheet'
 import { WeaponSheet, headerTemplate } from '../../WeaponSheet'
@@ -40,12 +47,16 @@ const [condPassivePath2, condPassive2] = cond(
 const critDmgNightSoulBlessingBuff = equal(
   input.weapon.key,
   key,
-  equal(condPassive2, 'on', percent(0.75, { path: 'critDMG_' }))
+  equal(condPassive2, 'on', prod(critDmg_, percent(0.75)), {
+    path: 'critDMG_',
+  })
 )
 const atkNightSoulBlessingBuff = equal(
   input.weapon.key,
   key,
-  equal(condPassive2, 'on', percent(0.75, { path: 'atk_' }))
+  equal(condPassive2, 'on', prod(atk_, percent(0.75)), {
+    path: 'atk_',
+  })
 )
 
 const data = dataObjForWeaponSheet(key, {
@@ -60,7 +71,7 @@ const sheet: IWeaponSheet = {
       value: condPassive,
       path: condPassivePath,
       header: headerTemplate(key, st('conditional')),
-      name: st('hitOp.skillOrBurst'),
+      name: st('afterUse.skillOrBurst'),
       states: {
         on: {
           fields: [

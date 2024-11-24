@@ -1,5 +1,5 @@
-import { objKeyMap } from '@genshin-optimizer/common/util'
-import type { CharacterKey } from '@genshin-optimizer/gi/consts'
+import { objKeyMap, range } from '@genshin-optimizer/common/util'
+import type { CharacterKey, ElementKey } from '@genshin-optimizer/gi/consts'
 import { allStats } from '@genshin-optimizer/gi/stats'
 import {
   constant,
@@ -8,13 +8,12 @@ import {
   infoMut,
   input,
   lookup,
-  one,
+  naught,
   percent,
   prod,
   subscript,
   sum,
   target,
-  unequal,
 } from '@genshin-optimizer/gi/wr'
 import { cond, st, stg } from '../../SheetUtil'
 import { CharacterSheet } from '../CharacterSheet'
@@ -28,6 +27,7 @@ import {
 } from '../dataUtil'
 
 const key: CharacterKey = 'Mavuika'
+const elementKey: ElementKey = 'pyro'
 const skillParam_gen = allStats.char.skillParam[key]
 const ct = charTemplates(key)
 
@@ -57,7 +57,7 @@ const dm = {
   skill: {
     skillDmg: skillParam_gen.skill[s++],
     radianceDmg: skillParam_gen.skill[s++],
-    interval: skillParam_gen.skill[s++],
+    interval: skillParam_gen.skill[s++][0],
     flamestriderDmg1: skillParam_gen.skill[s++],
     flamestriderDmg2: skillParam_gen.skill[s++],
     flamestriderDmg3: skillParam_gen.skill[s++],
@@ -76,53 +76,106 @@ const dm = {
     sunfellSliceDmgBonus: skillParam_gen.burst[b++],
     flamestriderNADmgBonus: skillParam_gen.burst[b++],
     flamestriderCADmgBonus: skillParam_gen.burst[b++],
+    what1: skillParam_gen.burst[b++],
+    what2: skillParam_gen.burst[b++],
     cd: skillParam_gen.burst[b++][0],
     fightingSpiritLimit: skillParam_gen.burst[b++][0],
   },
   passive1: {
     atkBonus: skillParam_gen.passive1[p1++][0],
   },
-  passive2: {
-    dmgBonus: skillParam_gen.passive2[p2++],
-    energyGen: skillParam_gen.passive2[p2++][0],
-    electroDmg_bonus: skillParam_gen.passive2[p2++][0],
-  },
-  constellation2: {
-    def_ignore: skillParam_gen.constellation2[0],
-  },
-  constellation4: {
-    atk_bonus: skillParam_gen.constellation4[0],
-    duration: skillParam_gen.constellation4[1],
-  },
 } as const
 
-const [condSkillEyePath, condSkillEye] = cond(key, 'skillEye')
-const [condInBurstPath, condInBurst] = cond(key, 'InBurst')
-const defIgn_ = greaterEq(
-  input.constellation,
-  2,
-  equal(condInBurst, 'on', dm.constellation2.def_ignore)
+const [condFightingSpiritPath, condFightingSpirit] = cond(key, 'FightingSpirit')
+const burstFightingSpiritArr = range(50, dm.burst.fightingSpiritLimit, 10)
+const fightingSpiritNum = lookup(
+  condFightingSpirit,
+  objKeyMap(burstFightingSpiritArr, (stacks) => constant(stacks)),
+  naught
+)
+const burstFightingSpiritSunfellSliceDmg = prod(
+  input.total.atk,
+  fightingSpiritNum,
+  subscript(input.total.burstIndex, dm.burst.sunfellSliceDmgBonus, {
+    unit: '%',
+    fixed: 2,
+  })
+)
+const burstFightingSpiritFlamestriderNADmg = prod(
+  input.total.atk,
+  fightingSpiritNum,
+  subscript(input.total.burstIndex, dm.burst.flamestriderNADmgBonus, {
+    unit: '%',
+    fixed: 2,
+  })
+)
+const burstFightingSpiritFlamestriderCADmg = prod(
+  input.total.atk,
+  fightingSpiritNum,
+  subscript(input.total.burstIndex, dm.burst.flamestriderCADmgBonus, {
+    unit: '%',
+    fixed: 2,
+  })
 )
 
-function skillDmg(atkType: number[]) {
-  // if Raiden is above or equal to C2, then account for DEF Ignore else not
-  return dmgNode('atk', atkType, 'skill')
-}
-
-const energyCosts = [40, 50, 60, 70, 80, 90]
-const [condSkillEyeTeamPath, condSkillEyeTeam] = cond(key, 'skillEyeTeam')
-
-const resolveStacks = [10, 20, 30, 40, 50, 60]
-const [condResolveStackPath, condResolveStack] = cond(key, 'burstResolve')
-
-const [condC4Path, condC4] = cond(key, 'c4')
-const c4AtkBonus_ = greaterEq(
-  input.constellation,
+const [condA1Path, condA1] = cond(key, 'a1')
+const a1AtkBonus_ = greaterEq(
+  input.asc,
+  1,
+  equal('a1', condA1, percent(dm.passive1.atkBonus, { path: 'atk_' }))
+)
+const [condA4StacksPath, condA4Stacks] = cond(key, 'a4Stacks')
+const a4Stacks = range(0, 19)
+const a4CommonDmgBonusDisp = greaterEq(
+  input.asc,
   4,
+  lookup(
+    condA4Stacks,
+    Object.fromEntries(
+      a4Stacks.map((stacks) => [
+        stacks,
+        prod((20 - stacks) / 20, fightingSpiritNum, percent(0.0025)),
+      ])
+    ),
+    naught
+  )
+)
+const a4CommonDmgBonus = equal(
+  target.charKey,
+  input.activeCharKey,
+  a4CommonDmgBonusDisp
+)
+
+const [condC1Path, condC1] = cond(key, 'c1')
+const c1AtkBonus_ = greaterEq(
+  input.constellation,
+  1,
+  equal('c1', condC1, percent(0.4, { path: 'atk_' }))
+)
+const [condC2Path, condC2] = cond(key, 'c2')
+const c2AtkBonus = greaterEq(
+  input.constellation,
+  2,
+  equal('c2', condC2, constant(300, { path: 'atk' }))
+)
+const c2EnemyRedBonus_ = greaterEq(
+  input.constellation,
+  2,
+  equal('c2', condC2, percent(0.2, { path: 'enemyDefRed_' }))
+)
+const [condC2FlamestriderPath, condC2Flamestrider] = cond(key, 'c2Flamestrider')
+const c2NADmgInc_ = greaterEq(
+  input.constellation,
+  2,
+  equal('c2Flamestrider', condC2Flamestrider, prod(input.total.atk, percent(1)))
+)
+const c2CADmgInc_ = greaterEq(
+  input.constellation,
+  2,
   equal(
-    'c4',
-    condC4,
-    unequal(input.activeCharKey, target.charKey, dm.constellation4.atk_bonus)
+    'c2Flamestrider',
+    condC2Flamestrider,
+    prod(input.total.atk, percent(1.5))
   )
 )
 
@@ -135,11 +188,84 @@ const dmgFormulas = {
   },
   plunging: plungingDmgNodes('atk', dm.plunging),
   skill: {
-    dmg: skillDmg(dm.skill.skillDmg),
+    skillDmg: dmgNode('atk', dm.skill.skillDmg, 'skill'),
+    radianceDmg: dmgNode('atk', dm.skill.radianceDmg, 'skill'),
+    flamestriderDmg1: dmgNode('atk', dm.skill.flamestriderDmg1, 'skill', {
+      premod: {
+        skill_dmgInc: sum(burstFightingSpiritFlamestriderNADmg, c2NADmgInc_),
+      },
+    }),
+    flamestriderDmg2: dmgNode('atk', dm.skill.flamestriderDmg2, 'skill', {
+      premod: {
+        skill_dmgInc: sum(burstFightingSpiritFlamestriderNADmg, c2NADmgInc_),
+      },
+    }),
+    flamestriderDmg3: dmgNode('atk', dm.skill.flamestriderDmg3, 'skill', {
+      premod: {
+        skill_dmgInc: sum(burstFightingSpiritFlamestriderNADmg, c2NADmgInc_),
+      },
+    }),
+    flamestriderDmg4: dmgNode('atk', dm.skill.flamestriderDmg4, 'skill', {
+      premod: {
+        skill_dmgInc: sum(burstFightingSpiritFlamestriderNADmg, c2NADmgInc_),
+      },
+    }),
+    flamestriderDmg5: dmgNode('atk', dm.skill.flamestriderDmg5, 'skill', {
+      premod: {
+        skill_dmgInc: sum(burstFightingSpiritFlamestriderNADmg, c2NADmgInc_),
+      },
+    }),
+    flamestriderSprintDmg: dmgNode(
+      'atk',
+      dm.skill.flamestriderSprintDmg,
+      'skill'
+    ),
+    flamestriderCACyclicDmg: dmgNode(
+      'atk',
+      dm.skill.flamestriderCACyclicDmg,
+      'skill',
+      {
+        premod: {
+          skill_dmgInc: sum(burstFightingSpiritFlamestriderCADmg, c2CADmgInc_),
+        },
+      }
+    ),
+    flamestriderCAFinalDmg: dmgNode(
+      'atk',
+      dm.skill.flamestriderCAFinalDmg,
+      'skill',
+      {
+        premod: {
+          skill_dmgInc: sum(burstFightingSpiritFlamestriderCADmg, c2CADmgInc_),
+        },
+      }
+    ),
+    flamestriderPlungeDmg: dmgNode(
+      'atk',
+      dm.skill.flamestriderPlungeDmg,
+      'skill'
+    ),
   },
   burst: {
+    dmg: dmgNode('atk', dm.burst.dmg, 'burst', {
+      premod: { burst_dmgInc: burstFightingSpiritSunfellSliceDmg },
+    }),
   },
-  passive2: {
+  constellation6: {
+    flamestriderDmg: customDmgNode(
+      prod(input.total.atk, percent(2)),
+      'elemental',
+      {
+        hit: { ele: constant(elementKey) },
+      }
+    ),
+    ringsOfSearingRadianceDmg: customDmgNode(
+      prod(input.total.atk, percent(4)),
+      'elemental',
+      {
+        hit: { ele: constant(elementKey) },
+      }
+    ),
   },
 }
 const nodeC3 = greaterEq(input.constellation, 3, 3)
@@ -147,13 +273,17 @@ const nodeC5 = greaterEq(input.constellation, 5, 3)
 
 export const data = dataObjForCharacterSheet(key, dmgFormulas, {
   premod: {
+    atk_: sum(a1AtkBonus_, c1AtkBonus_),
     skillBoost: nodeC5,
     burstBoost: nodeC3,
-    enemyDefIgn_: defIgn_,
+  },
+  base: {
+    atk: c2AtkBonus,
   },
   teamBuff: {
     premod: {
-      atk_: c4AtkBonus_,
+      all_dmg_: a4CommonDmgBonus,
+      enemyDefRed_: c2EnemyRedBonus_,
     },
   },
 })
@@ -167,6 +297,7 @@ const sheet: TalentSheet = {
       fields: dm.normal.hitArr.map((_, i) => ({
         node: infoMut(dmgFormulas.normal[i], {
           name: ct.chg(`auto.skillParams.${i}`),
+          multi: i === 1 ? 2 : i === 2 ? 3 : undefined,
         }),
       })),
     },
@@ -214,91 +345,202 @@ const sheet: TalentSheet = {
     {
       fields: [
         {
-          node: infoMut(dmgFormulas.skill.dmg, {
+          node: infoMut(dmgFormulas.skill.skillDmg, {
             name: ct.chg(`skill.skillParams.0`),
           }),
         },
         {
-          text: ct.chg('skill.skillParams.4'),
+          node: infoMut(dmgFormulas.skill.radianceDmg, {
+            name: ct.chg(`skill.skillParams.1`),
+          }),
+        },
+        {
+          text: ct.chg('skill.skillParams.2'),
+          value: dm.skill.interval,
+          unit: 's',
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderDmg1, {
+            name: ct.chg(`skill.skillParams.3`),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderDmg2, {
+            name: ct.chg(`skill.skillParams.4`),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderDmg3, {
+            name: ct.chg(`skill.skillParams.5`),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderDmg4, {
+            name: ct.chg(`skill.skillParams.6`),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderDmg5, {
+            name: ct.chg(`skill.skillParams.7`),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderSprintDmg, {
+            name: ct.chg(`skill.skillParams.8`),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderCACyclicDmg, {
+            name: ct.chg(`skill.skillParams.9`),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderCAFinalDmg, {
+            name: ct.chg(`skill.skillParams.10`),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.skill.flamestriderPlungeDmg, {
+            name: ct.chg(`skill.skillParams.11`),
+          }),
+        },
+        {
+          text: ct.chg('skill.skillParams.12'),
+          value: (data) =>
+            data.get(input.constellation).value >= 1
+              ? dm.skill.nightsoulPointLimit + 40
+              : dm.skill.nightsoulPointLimit,
+        },
+        {
+          text: ct.chg('skill.skillParams.13'),
           value: dm.skill.cd,
           unit: 's',
         },
       ],
     },
+    ct.condTem('constellation2', {
+      value: condC2,
+      path: condC2Path,
+      name: ct.ch('ringsOfSearingRadiance'),
+      states: {
+        c2: {
+          fields: [
+            {
+              node: c2EnemyRedBonus_,
+            },
+          ],
+        },
+      },
+    }),
+    ct.condTem('constellation2', {
+      value: condC2Flamestrider,
+      path: condC2FlamestriderPath,
+      name: ct.ch('flamestriderForm'),
+      states: {
+        c2Flamestrider: {
+          fields: [
+            {
+              node: infoMut(c2NADmgInc_, {
+                name: ct.ch('c2NADmgInc_'),
+              }),
+            },
+            {
+              node: infoMut(c2CADmgInc_, {
+                name: ct.ch('c2CADmgInc_'),
+              }),
+            },
+          ],
+        },
+      },
+    }),
   ]),
 
   burst: ct.talentTem('burst', [
     {
       fields: [
         {
-          text: ct.chg('burst.skillParams.13'),
+          node: infoMut(dmgFormulas.burst.dmg, {
+            name: ct.chg(`burst.skillParams.0`),
+          }),
+        },
+        {
+          text: ct.chg('burst.skillParams.1'),
           value: dm.burst.duration,
           unit: 's',
         },
         {
-          text: ct.chg('burst.skillParams.14'),
+          text: ct.chg('burst.skillParams.5'),
           value: dm.burst.cd,
           unit: 's',
+        },
+        {
+          text: ct.chg('burst.skillParams.6'),
+          value: dm.burst.fightingSpiritLimit,
         },
       ],
     },
     ct.condTem('burst', {
-      value: condInBurst,
-      path: condInBurstPath,
-      name: ct.ch('burst.active'),
-      states: {
-        on: {
+      value: condFightingSpirit,
+      path: condFightingSpiritPath,
+      name: ct.ch('fightingSpiritPoints'),
+      teamBuff: true,
+      states: () =>
+        objKeyMap(burstFightingSpiritArr, (points) => ({
+          name: st('stack', { count: points }),
           fields: [
             {
-              text: st('infusion.electro'),
-              variant: 'electro',
+              node: infoMut(burstFightingSpiritSunfellSliceDmg, {
+                name: ct.chg(`burst.skillParams.2`),
+              }),
             },
             {
-              text: st('incInterRes'),
+              node: infoMut(burstFightingSpiritFlamestriderNADmg, {
+                name: ct.chg(`burst.skillParams.3`),
+              }),
             },
             {
-              text: st('immuneToElectroCharged'),
+              node: infoMut(burstFightingSpiritFlamestriderCADmg, {
+                name: ct.chg(`burst.skillParams.4`),
+              }),
             },
           ],
-        },
-      },
+        })),
     }),
-    ct.headerTem('constellation2', {
-      canShow: equal(condInBurst, 'on', 1),
-      fields: [
-        {
-          node: defIgn_,
-        },
-      ],
-    }),
-  ]),
-
-  passive1: ct.talentTem('passive1'),
-  passive2: ct.talentTem('passive2', [
-
-  ]),
-  passive3: ct.talentTem('passive3'),
-  constellation1: ct.talentTem('constellation1'),
-  constellation2: ct.talentTem('constellation2'),
-  constellation3: ct.talentTem('constellation3', [
-    { fields: [{ node: nodeC3 }] },
-  ]),
-  constellation4: ct.talentTem('constellation4', [
-    ct.condTem('constellation4', {
-      value: condC4,
-      path: condC4Path,
+    ct.condTem('passive2', {
+      path: condA4StacksPath,
+      value: condA4Stacks,
       teamBuff: true,
-      canShow: unequal(input.activeCharKey, target.charKey, 1),
-      name: ct.ch('c4.expires'),
+      name: st('afterUse.burst'),
+      states: Object.fromEntries(
+        a4Stacks.map((stack) => [
+          stack,
+          {
+            name: st('seconds', { count: stack }),
+            fields: [
+              {
+                node: infoMut(a4CommonDmgBonus, { path: 'all_dmg_' }),
+              },
+            ],
+          },
+        ])
+      ),
+    }),
+  ]),
+
+  passive1: ct.talentTem('passive1', [
+    ct.condTem('passive1', {
+      value: condA1,
+      path: condA1Path,
+      name: st('nightsoul.partyBurst'),
       states: {
-        c4: {
+        a1: {
           fields: [
             {
-              node: c4AtkBonus_,
+              node: a1AtkBonus_,
             },
             {
-              text: ct.chg('skill.skillParams.2'),
-              value: dm.constellation4.duration,
+              text: ct.ch('duration'),
+              value: '10',
               unit: 's',
             },
           ],
@@ -306,10 +548,53 @@ const sheet: TalentSheet = {
       },
     }),
   ]),
+  passive2: ct.talentTem('passive2'),
+  passive3: ct.talentTem('passive3'),
+  constellation1: ct.talentTem('constellation1', [
+    ct.condTem('constellation1', {
+      value: condC1,
+      path: condC1Path,
+      name: ct.ch('fightingSpiritGained'),
+      states: {
+        c1: {
+          fields: [
+            {
+              node: c1AtkBonus_,
+            },
+            {
+              text: ct.ch('duration'),
+              value: '8',
+              unit: 's',
+            },
+          ],
+        },
+      },
+    }),
+  ]),
+  constellation2: ct.talentTem('constellation2'),
+  constellation3: ct.talentTem('constellation3', [
+    { fields: [{ node: nodeC3 }] },
+  ]),
+  constellation4: ct.talentTem('constellation4'),
   constellation5: ct.talentTem('constellation5', [
     { fields: [{ node: nodeC5 }] },
   ]),
-  constellation6: ct.talentTem('constellation6'),
+  constellation6: ct.talentTem('constellation6', [
+    {
+      fields: [
+        {
+          node: infoMut(dmgFormulas.constellation6.flamestriderDmg, {
+            name: ct.ch('c6FlamestriderDmg'),
+          }),
+        },
+        {
+          node: infoMut(dmgFormulas.constellation6.ringsOfSearingRadianceDmg, {
+            name: ct.ch('c6RingsOfSearingRadianceDmg'),
+          }),
+        },
+      ],
+    },
+  ]),
 }
 
 export default new CharacterSheet(sheet, data)
