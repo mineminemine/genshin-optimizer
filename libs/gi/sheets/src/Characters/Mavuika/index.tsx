@@ -14,6 +14,7 @@ import {
   subscript,
   sum,
   target,
+  threshold,
 } from '@genshin-optimizer/gi/wr'
 import { cond, st, stg } from '../../SheetUtil'
 import { CharacterSheet } from '../CharacterSheet'
@@ -129,15 +130,29 @@ const a4Stacks = range(0, 19)
 const a4CommonDmgBonusDisp = greaterEq(
   input.asc,
   4,
-  lookup(
-    condA4Stacks,
-    Object.fromEntries(
-      a4Stacks.map((stacks) => [
-        stacks,
-        prod((20 - stacks) / 20, fightingSpiritNum, percent(0.0025)),
-      ])
+  threshold(
+    input.constellation,
+    4,
+    lookup(
+      condA4Stacks,
+      Object.fromEntries(
+        a4Stacks.map((stacks) => [
+          stacks,
+          prod(fightingSpiritNum, percent(0.0025)),
+        ])
+      ),
+      naught
     ),
-    naught
+    lookup(
+      condA4Stacks,
+      Object.fromEntries(
+        a4Stacks.map((stacks) => [
+          stacks,
+          prod((20 - stacks) / 20, fightingSpiritNum, percent(0.0025)),
+        ])
+      ),
+      naught
+    )
   )
 )
 const a4CommonDmgBonus = equal(
@@ -252,19 +267,19 @@ const dmgFormulas = {
     }),
   },
   constellation6: {
-    flamestriderDmg: customDmgNode(
-      prod(input.total.atk, percent(2)),
-      'elemental',
-      {
+    flamestriderDmg: greaterEq(
+      input.constellation,
+      6,
+      customDmgNode(prod(input.total.atk, percent(2)), 'elemental', {
         hit: { ele: constant(elementKey) },
-      }
+      })
     ),
-    ringsOfSearingRadianceDmg: customDmgNode(
-      prod(input.total.atk, percent(4)),
-      'elemental',
-      {
+    ringsOfSearingRadianceDmg: greaterEq(
+      input.constellation,
+      6,
+      customDmgNode(prod(input.total.atk, percent(4)), 'elemental', {
         hit: { ele: constant(elementKey) },
-      }
+      })
     ),
   },
 }
