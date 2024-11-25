@@ -182,7 +182,11 @@ const [condC2FlamestriderPath, condC2Flamestrider] = cond(key, 'c2Flamestrider')
 const c2NADmgInc_ = greaterEq(
   input.constellation,
   2,
-  equal('c2Flamestrider', condC2Flamestrider, prod(input.total.atk, percent(1)))
+  equal(
+    'c2Flamestrider',
+    condC2Flamestrider,
+    prod(input.total.atk, percent(0.8))
+  )
 )
 const c2CADmgInc_ = greaterEq(
   input.constellation,
@@ -190,7 +194,16 @@ const c2CADmgInc_ = greaterEq(
   equal(
     'c2Flamestrider',
     condC2Flamestrider,
-    prod(input.total.atk, percent(1.5))
+    prod(input.total.atk, percent(1.3))
+  )
+)
+const c2SunfellSliceDmgInc_ = greaterEq(
+  input.constellation,
+  2,
+  equal(
+    'c2Flamestrider',
+    condC2Flamestrider,
+    prod(input.total.atk, percent(1.8))
   )
 )
 
@@ -263,7 +276,12 @@ const dmgFormulas = {
   },
   burst: {
     dmg: dmgNode('atk', dm.burst.dmg, 'burst', {
-      premod: { burst_dmgInc: burstFightingSpiritSunfellSliceDmg },
+      premod: {
+        burst_dmgInc: sum(
+          burstFightingSpiritSunfellSliceDmg,
+          c2SunfellSliceDmgInc_
+        ),
+      },
     }),
   },
   constellation6: {
@@ -539,6 +557,22 @@ const sheet: TalentSheet = {
           },
         ])
       ),
+    }),
+    ct.condTem('constellation2', {
+      value: condC2Flamestrider,
+      path: condC2FlamestriderPath,
+      name: ct.ch('flamestriderForm'),
+      states: {
+        c2Flamestrider: {
+          fields: [
+            {
+              node: infoMut(c2SunfellSliceDmgInc_, {
+                name: ct.ch('c2SunfellSliceDmgInc_'),
+              }),
+            },
+          ],
+        },
+      },
     }),
   ]),
 
